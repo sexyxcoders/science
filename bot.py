@@ -2,6 +2,7 @@ import asyncio, random
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from data.helpers import is_admin, add_points, use_coin
+from data.keyboards import build_keyboard
 from utils.db import groups_col, users_col, sessions_col, questions_col, admins_col
 from data.keyboards import build_keyboard
 from config import BOT_TOKEN, API_ID, API_HASH, OWNER_ID, QUESTION_CHANNEL
