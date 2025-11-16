@@ -1,28 +1,21 @@
-import asyncio, random, os, time
+import asyncio, random, os
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from utils.db import groups_col, users_col, sessions_col, questions_col, admins_col
-from data.helpers import is_admin, add_points, use_coin
-from data.keyboards import build_keyboard
+from utils.helpers import is_admin, add_points, use_coin
+from utils.keyboards import build_keyboard
 from config import BOT_TOKEN, API_ID, API_HASH, OWNER_ID, QUESTION_CHANNEL
+from pyrogram.sessions import StringSession
 
 # ------------------------
-# Initialize Bot
+# Use String Session for Heroku
 # ------------------------
-app = Client("quiz_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+STRING_SESSION = os.environ.get("STRING_SESSION")  # Add in Heroku Config Vars
 
-# ------------------------
-# Safe Start Function
-# ------------------------
-async def safe_start():
-    while True:
-        try:
-            await app.start()
-            print("🚀 Science Quiz Bot is running...")
-            break
-        except Exception as e:
-            print("⏳ Time sync issue, retrying in 3 seconds...", e)
-            time.sleep(3)
+if STRING_SESSION:
+    app = Client(StringSession(STRING_SESSION), api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+else:
+    app = Client("quiz_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # ------------------------
 # /addadmin - Owner only
@@ -45,15 +38,17 @@ async def start_quiz(client, message):
     args = message.text.split(" ")
     category = args[1] if len(args) > 1 else "Random"
 
-    group = groups_col.find_one({"group_id": group_id})
-    if group and group.get("running", False):
+    group = groups_col.find_one({"group_id": group_id}) or {}
+    if group.get("running", False):
         return await message.reply_text("❌ Quiz already running!")
 
-    timer = group.get("timer", 30) if group else 30
+    timer = group.get("timer", 30)
     groups_col.update_one({"group_id": group_id}, {"$set": {"running": True, "timer": timer}}, upsert=True)
     await message.reply_text(f"🎉 Quiz started! Category: {category}, Timer: {timer}s")
 
     qs = list(questions_col.find({"category": category})) if category.lower() != "random" else list(questions_col.find())
+    if not qs:
+        return await message.reply_text("❌ No questions found in this category.")
     random.shuffle(qs)
 
     for q in qs:
@@ -64,10 +59,9 @@ async def start_quiz(client, message):
         sessions_col.insert_one({"group_id": group_id, "question_id": q["question"], "answered": False})
         await app.send_message(group_id, f"📝 {q['category']} Question:\n{q['question']}",
                                reply_markup=build_keyboard(q["options"], q["question"]))
-
         await asyncio.sleep(timer)
 
-        scores = users_col.find().sort("points", -1)
+        scores = list(users_col.find().sort("points", -1))
         text = f"⏰ Time's up! Correct answer: {q['answer']}\n\n🏆 Scores:\n"
         for user in scores:
             text += f"{user.get('username','User')} - {user.get('points',0)} pts | {user.get('coins',0)} coins\n"
@@ -89,7 +83,6 @@ async def stop_quiz(client, message):
         await message.reply_text("🛑 Quiz stopped by admin.")
     else:
         await message.reply_text("❌ Only group admins can stop the quiz.")
-
 # ------------------------
 # /addquiz - Admin/Owner
 # ------------------------
@@ -154,14 +147,11 @@ async def sync_quiz(client, message):
     user_id = message.from_user.id
     if user_id != OWNER_ID and not is_admin(user_id):
         return await message.reply_text("❌ Only owner/admin can sync questions.")
-    
     if not QUESTION_CHANNEL:
         return await message.reply_text("❌ QUESTION_CHANNEL not set in config.py")
-    
     all_questions = list(questions_col.find())
     if not all_questions:
         return await message.reply_text("❌ No questions found to sync.")
-    
     sent_count = 0
     for q in all_questions:
         try:
@@ -172,11 +162,10 @@ async def sync_quiz(client, message):
             sent_count += 1
         except:
             continue
-    
     await message.reply_text(f"✅ Synced {sent_count} questions to the channel.")
 
 # ------------------------
-# Start the bot safely
+# Run the bot
 # ------------------------
-asyncio.get_event_loop().run_until_complete(safe_start())
-app.idle()
+print("🚀 Science Quiz Bot is running...")
+app.run()
