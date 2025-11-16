@@ -10,7 +10,6 @@ from data.keyboards import build_keyboard
 from config import BOT_TOKEN, API_ID, API_HASH, OWNER_ID, QUESTION_CHANNEL
 
 from pyrogram import filters
-from bot import app   # if you're inside bot.py, remove this line!
 
 
 @app.on_message(filters.command("start"))
