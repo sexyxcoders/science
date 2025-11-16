@@ -1,9 +1,9 @@
 import asyncio, random
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from data.helpers import is_admin, add_points, use_coin   # <-- correct path
 from utils.db import groups_col, users_col, sessions_col, questions_col, admins_col
-from utils.helpers import is_admin, add_points, use_coin
-from utils.keyboards import build_keyboard
+from keyboards import build_keyboard                       # <-- if keyboards.py is in root
 from config import BOT_TOKEN, OWNER_ID, QUESTION_CHANNEL
 
 # ------------------------
