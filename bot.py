@@ -1,4 +1,4 @@
-import asyncio, random, os
+import asyncio, random, os, time
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from utils.db import groups_col, users_col, sessions_col, questions_col, admins_col
@@ -6,7 +6,23 @@ from data.helpers import is_admin, add_points, use_coin
 from data.keyboards import build_keyboard
 from config import BOT_TOKEN, API_ID, API_HASH, OWNER_ID, QUESTION_CHANNEL
 
+# ------------------------
+# Initialize Bot
+# ------------------------
 app = Client("quiz_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+
+# ------------------------
+# Safe Start Function
+# ------------------------
+async def safe_start():
+    while True:
+        try:
+            await app.start()
+            print("🚀 Science Quiz Bot is running...")
+            break
+        except Exception as e:
+            print("⏳ Time sync issue, retrying in 3 seconds...", e)
+            time.sleep(3)
 
 # ------------------------
 # /addadmin - Owner only
@@ -48,6 +64,7 @@ async def start_quiz(client, message):
         sessions_col.insert_one({"group_id": group_id, "question_id": q["question"], "answered": False})
         await app.send_message(group_id, f"📝 {q['category']} Question:\n{q['question']}",
                                reply_markup=build_keyboard(q["options"], q["question"]))
+
         await asyncio.sleep(timer)
 
         scores = users_col.find().sort("points", -1)
@@ -95,7 +112,6 @@ async def add_quiz(client, message):
             upsert=True
         )
         await message.reply_text("✅ Question added successfully.")
-        # Send to QUESTION_CHANNEL if set
         if QUESTION_CHANNEL:
             await app.send_message(QUESTION_CHANNEL, f"{category} | {question} | {','.join(options)} | {answer} | {hint}")
     except Exception as e:
@@ -160,7 +176,7 @@ async def sync_quiz(client, message):
     await message.reply_text(f"✅ Synced {sent_count} questions to the channel.")
 
 # ------------------------
-# Run the bot
+# Start the bot safely
 # ------------------------
-print("🚀 Science Quiz Bot is running...")
-app.run()
+asyncio.get_event_loop().run_until_complete(safe_start())
+app.idle()
