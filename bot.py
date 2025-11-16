@@ -1,7 +1,6 @@
 import asyncio
 import random
 import time
-import os
 
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -10,7 +9,6 @@ from utils.db import groups_col, users_col, sessions_col, questions_col, admins_
 from data.helpers import is_admin, add_points, use_coin
 from data.keyboards import build_keyboard
 from config import BOT_TOKEN, API_ID, API_HASH, OWNER_ID, QUESTION_CHANNEL
-
 
 # -----------------------------------------
 # Initialize Client
@@ -21,7 +19,6 @@ app = Client(
     api_hash=API_HASH,
     bot_token=BOT_TOKEN
 )
-
 
 # -----------------------------------------
 # Safe Start (fixes Heroku Time Sync issue)
@@ -34,7 +31,7 @@ async def safe_start():
             break
         except Exception as e:
             print("⏳ Time sync issue, retrying in 3 seconds...", e)
-            time.sleep(3)
+            await asyncio.sleep(3)
 
 
 # -----------------------------------------
@@ -71,7 +68,6 @@ async def start_quiz(client, message):
         return await message.reply_text("❌ Quiz already running!")
 
     timer = group.get("timer", 30) if group else 30
-
     groups_col.update_one(
         {"group_id": group_id},
         {"$set": {"running": True, "timer": timer}},
@@ -85,6 +81,11 @@ async def start_quiz(client, message):
         qs = list(questions_col.find())
     else:
         qs = list(questions_col.find({"category": category}))
+
+    if not qs:
+        await message.reply_text("❌ No questions found for this category.")
+        groups_col.update_one({"group_id": group_id}, {"$set": {"running": False}})
+        return
 
     random.shuffle(qs)
 
@@ -133,14 +134,10 @@ async def start_quiz(client, message):
 async def stop_quiz(client, message):
     group_id = message.chat.id
     user_id = message.from_user.id
-
     member = await app.get_chat_member(group_id, user_id)
 
     if member.status in ["administrator", "creator"] or is_admin(user_id):
-        groups_col.update_one(
-            {"group_id": group_id},
-            {"$set": {"running": False}}
-        )
+        groups_col.update_one({"group_id": group_id}, {"$set": {"running": False}})
         await message.reply_text("🛑 Quiz stopped.")
     else:
         await message.reply_text("❌ Only admins can stop the quiz.")
@@ -162,23 +159,21 @@ async def add_quiz(client, message):
                 "Category: X\nQuestion: Y\nOptions: A,B,C,D\nAnswer: A\nHint: Z"
             )
 
-        category = lines[0].split(":")[1].strip()
-        question = lines[1].split(":")[1].strip()
-        options = lines[2].split(":")[1].strip().split(",")
-        answer = lines[3].split(":")[1].strip()
-        hint = lines[4].split(":")[1].strip()
+        category = lines[0].split(":", 1)[1].strip()
+        question = lines[1].split(":", 1)[1].strip()
+        options = lines[2].split(":", 1)[1].strip().split(",")
+        answer = lines[3].split(":", 1)[1].strip()
+        hint = lines[4].split(":", 1)[1].strip()
 
         questions_col.update_one(
             {"question": question},
-            {
-                "$set": {
-                    "category": category,
-                    "question": question,
-                    "options": options,
-                    "answer": answer,
-                    "hint": hint
-                }
-            },
+            {"$set": {
+                "category": category,
+                "question": question,
+                "options": options,
+                "answer": answer,
+                "hint": hint
+            }},
             upsert=True
         )
 
@@ -206,9 +201,7 @@ async def delete_quiz(client, message):
         return await message.reply_text("Usage: /deletequiz <question>")
 
     qtext = message.text.replace("/deletequiz", "").strip()
-
     questions_col.delete_one({"question": qtext})
-
     await message.reply_text("✅ Question deleted.")
 
 
@@ -219,7 +212,6 @@ async def delete_quiz(client, message):
 async def set_timer(client, message):
     user_id = message.from_user.id
     group_id = message.chat.id
-
     member = await app.get_chat_member(group_id, user_id)
 
     if member.status not in ["administrator", "creator"] and not is_admin(user_id):
@@ -229,23 +221,16 @@ async def set_timer(client, message):
         return await message.reply_text("Usage: /set <seconds>")
 
     seconds = int(message.command[1])
-
-    groups_col.update_one(
-        {"group_id": group_id},
-        {"$set": {"timer": seconds}},
-        upsert=True
-    )
-
+    groups_col.update_one({"group_id": group_id}, {"$set": {"timer": seconds}}, upsert=True)
     await message.reply_text(f"✅ Timer set to {seconds}s per question.")
 
 
 # -----------------------------------------
-# /synsquiz - Sync all questions to channel
+# /syncquiz - Sync all questions to channel
 # -----------------------------------------
-@app.on_message(filters.command("synsquiz") & filters.private)
+@app.on_message(filters.command("syncquiz") & filters.private)
 async def sync_quiz(client, message):
     user_id = message.from_user.id
-
     if user_id != OWNER_ID and not is_admin(user_id):
         return await message.reply_text("❌ Only owner/admin can sync questions.")
 
@@ -253,7 +238,6 @@ async def sync_quiz(client, message):
         return await message.reply_text("❌ QUESTION_CHANNEL not set!")
 
     all_questions = list(questions_col.find())
-
     if not all_questions:
         return await message.reply_text("❌ No questions found.")
 
@@ -270,15 +254,19 @@ async def sync_quiz(client, message):
             )
             sent += 1
         except:
-            pass
+            continue
 
     await message.reply_text(f"✅ Synced {sent} questions.")
 
 
 # -----------------------------------------
-# Start the bot safely (Heroku fix)
+# Run the bot safely
 # -----------------------------------------
-asyncio.get_event_loop().run_until_complete(safe_start())
+async def main():
+    await safe_start()
+    print("🚀 Science Quiz Bot is ready!")
+    await app.idle()
+    await app.stop()
 
-# Pyrogram sync method (NO idle())
-app.run()
+if __name__ == "__main__":
+    asyncio.run(main())
