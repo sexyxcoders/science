@@ -9,6 +9,31 @@ from data.helpers import is_admin, add_points, use_coin
 from data.keyboards import build_keyboard
 from config import BOT_TOKEN, API_ID, API_HASH, OWNER_ID, QUESTION_CHANNEL
 
+from pyrogram import filters
+from bot import app   # if you're inside bot.py, remove this line!
+
+
+@app.on_message(filters.command("start"))
+async def start_cmd(client, message):
+
+    if message.chat.type == "private":
+        return await message.reply_text(
+            "👋 **Welcome to the Science Quiz Bot!**\n\n"
+            "I can run quiz games in any group.\n\n"
+            "➤ Add me to a group\n"
+            "➤ Use /startquiz to begin\n\n"
+            "You can also add questions:\n"
+            "• /addquiz\n"
+            "• /deletequiz\n"
+            "• /syncquiz\n\n"
+            "Enjoy learning! 🚀"
+        )
+
+    else:
+        return await message.reply_text(
+            "👋 Bot is active in this group!\n"
+            "Use **/startquiz** to begin the quiz."
+        )
 
 # ============================================
 # Initialize Client
