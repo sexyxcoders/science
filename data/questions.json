@@ -1,1 +1,44 @@
-
+[
+  {
+    "category": "Biology",
+    "question": "Which organelle is known as the powerhouse of the cell?",
+    "options": ["Mitochondria", "Nucleus", "Ribosome", "Golgi apparatus"],
+    "answer": "Mitochondria",
+    "hint": "It produces ATP for the cell."
+  },
+  {
+    "category": "Biology",
+    "question": "What is the basic unit of life?",
+    "options": ["Cell", "Tissue", "Organ", "Organism"],
+    "answer": "Cell",
+    "hint": "All living things are made of it."
+  },
+  {
+    "category": "Chemistry",
+    "question": "What is the chemical formula of water?",
+    "options": ["H2O", "CO2", "O2", "NaCl"],
+    "answer": "H2O",
+    "hint": "Two hydrogen atoms and one oxygen atom."
+  },
+  {
+    "category": "Chemistry",
+    "question": "Which gas is released during photosynthesis?",
+    "options": ["Oxygen", "Carbon dioxide", "Nitrogen", "Hydrogen"],
+    "answer": "Oxygen",
+    "hint": "It is essential for human respiration."
+  },
+  {
+    "category": "Physics",
+    "question": "What is the SI unit of force?",
+    "options": ["Newton", "Joule", "Watt", "Pascal"],
+    "answer": "Newton",
+    "hint": "Force = mass × acceleration"
+  },
+  {
+    "category": "Physics",
+    "question": "What is the speed of light in vacuum?",
+    "options": ["3×10^8 m/s", "3×10^6 m/s", "1×10^8 m/s", "1×10^6 m/s"],
+    "answer": "3×10^8 m/s",
+    "hint": "It’s the universal speed limit."
+  }
+]
