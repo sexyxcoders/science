@@ -9,8 +9,6 @@ from data.helpers import is_admin, add_points, use_coin
 from data.keyboards import build_keyboard
 from config import BOT_TOKEN, API_ID, API_HASH, OWNER_ID, QUESTION_CHANNEL
 
-from pyrogram import filters
-
 
 @app.on_message(filters.command("start"))
 async def start_cmd(client, message):
