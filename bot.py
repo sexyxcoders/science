@@ -1,11 +1,18 @@
-import asyncio, random
+import asyncio
+import random
+import logging
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.errors import BadMsgNotification
 from data.helpers import is_admin, add_points, use_coin
 from data.keyboards import build_keyboard
 from utils.db import groups_col, users_col, sessions_col, questions_col, admins_col
-from data.keyboards import build_keyboard
 from config import BOT_TOKEN, API_ID, API_HASH, OWNER_ID, QUESTION_CHANNEL
+
+# ------------------------
+# Logging
+# ------------------------
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ------------------------
 # Initialize bot
@@ -87,7 +94,7 @@ async def add_quiz(client, message):
     try:
         lines = message.text.splitlines()
         if len(lines) < 5:
-            return await message.reply_text("Invalid format. Send 5 lines: Category, Question, Options, Answer, Hint.")
+            return await message.reply_text("Send 5 lines: Category, Question, Options, Answer, Hint.")
         category = lines[0].split(":")[1].strip()
         question = lines[1].split(":")[1].strip()
         options = lines[2].split(":")[1].strip().split(",")
@@ -99,7 +106,6 @@ async def add_quiz(client, message):
             upsert=True
         )
         await message.reply_text("✅ Question added successfully.")
-        # Send to QUESTION_CHANNEL if set
         if QUESTION_CHANNEL:
             await app.send_message(QUESTION_CHANNEL, f"{category} | {question} | {','.join(options)} | {answer} | {hint}")
     except Exception as e:
@@ -142,14 +148,11 @@ async def sync_quiz(client, message):
     user_id = message.from_user.id
     if user_id != OWNER_ID and not is_admin(user_id):
         return await message.reply_text("❌ Only owner/admin can sync questions.")
-    
     if not QUESTION_CHANNEL:
         return await message.reply_text("❌ QUESTION_CHANNEL not set in config.py")
-    
     all_questions = list(questions_col.find())
     if not all_questions:
         return await message.reply_text("❌ No questions found to sync.")
-    
     sent_count = 0
     for q in all_questions:
         try:
@@ -160,11 +163,19 @@ async def sync_quiz(client, message):
             sent_count += 1
         except:
             continue
-    
     await message.reply_text(f"✅ Synced {sent_count} questions to the channel.")
 
 # ------------------------
-# Run the bot
+# MAIN LOOP WITH RETRY
 # ------------------------
-print("🚀 Science Quiz Bot is running...")
-app.run()
+if __name__ == "__main__":
+    while True:
+        try:
+            logger.info("🚀 Science Quiz Bot is running...")
+            app.run()
+        except BadMsgNotification:
+            logger.warning("⏳ Time sync issue, retrying in 3 seconds...")
+            asyncio.sleep(3)
+        except Exception as e:
+            logger.error(f"❌ Unexpected error: {e}")
+            asyncio.sleep(5)
