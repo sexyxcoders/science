@@ -1,0 +1,47 @@
+{
+  "name": "science-quiz-bot",
+  "description": "A Telegram Science Quiz Bot with Physics, Chemistry, and Biology quizzes, hints & coins system, and admin features.",
+  "repository": "https://github.com/yourusername/science-quiz-bot",
+  "logo": "https://example.com/logo.png",
+  "keywords": ["telegram", "bot", "quiz", "science", "education"],
+  "env": {
+    "BOT_TOKEN": {
+      "description": "Bot token from BotFather",
+      "required": true
+    },
+    "API_ID": {
+      "description": "Telegram API ID",
+      "required": true
+    },
+    "API_HASH": {
+      "description": "Telegram API Hash",
+      "required": true
+    },
+    "OWNER_ID": {
+      "description": "Your Telegram numeric ID",
+      "required": true
+    },
+    "MONGO_URI": {
+      "description": "MongoDB connection URI",
+      "required": true
+    },
+    "QUESTION_CHANNEL": {
+      "description": "Optional: Telegram channel username or ID for syncing questions",
+      "required": false
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "Standard-1X"
+    }
+  },
+  "scripts": {
+    "postdeploy": "echo 'Science Quiz Bot deployed successfully!'"
+  }
+}
