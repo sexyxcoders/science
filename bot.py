@@ -1,6 +1,5 @@
 import asyncio
 import random
-import time
 
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -21,7 +20,7 @@ app = Client(
 )
 
 # -----------------------------------------
-# Safe Start (fixes Heroku Time Sync issue)
+# Safe Start (Heroku/VPS retry)
 # -----------------------------------------
 async def safe_start():
     while True:
@@ -29,7 +28,7 @@ async def safe_start():
             await app.start()
             print("🚀 Science Quiz Bot is running...")
             break
-        except Exception as e:
+        except RuntimeError as e:
             print("⏳ Time sync issue, retrying in 3 seconds...", e)
             await asyncio.sleep(3)
 
@@ -260,7 +259,7 @@ async def sync_quiz(client, message):
 
 
 # -----------------------------------------
-# Run the bot safely
+# Run the bot safely (loop-safe)
 # -----------------------------------------
 async def main():
     await safe_start()
@@ -269,4 +268,6 @@ async def main():
     await app.stop()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import asyncio
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
