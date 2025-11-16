@@ -259,12 +259,16 @@ async def sync_quiz(client, message):
 
 
 # -----------------------------------------
-# Run the bot safely (loop-safe)
+# Run the bot safely (loop-safe Pyrogram v2)
 # -----------------------------------------
 async def main():
     await safe_start()
     print("🚀 Science Quiz Bot is ready!")
-    await app.idle()
+
+    # Keep bot running indefinitely
+    stop_event = asyncio.Event()
+    await stop_event.wait()
+
     await app.stop()
 
 if __name__ == "__main__":
