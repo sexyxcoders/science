@@ -4,56 +4,24 @@ import sys
 import signal
 from pyrogram import errors
 
-from bot import app  # import the app object (no start on import)
+@app.on_message(filters.command("start"))
+async def start_cmd(client, message):
 
-RETRY_DELAY = 3  # seconds
-MAX_RETRIES = None  # None => retry forever
+    if message.chat.type == "private":
+        return await message.reply_text(
+            "👋 **Welcome to the Science Quiz Bot!**\n\n"
+            "I can run quiz games in any group.\n\n"
+            "➤ Add me to a group\n"
+            "➤ Use /startquiz to begin\n\n"
+            "You can also add questions using:\n"
+            "• /addquiz\n"
+            "• /deletequiz\n"
+            "• /syncquiz\n\n"
+            "Enjoy learning! 🚀"
+        )
 
-
-async def safe_start():
-    retries = 0
-    while True:
-        try:
-            await app.start()
-            print("🚀 Science Quiz Bot is running...")
-            break
-        except (RuntimeError, errors.RPCError) as e:
-            # common issues: time sync / network / auth problems
-            retries += 1
-            print(f"⏳ Start failed (attempt {retries}): {e}", file=sys.stderr)
-            if MAX_RETRIES and retries >= MAX_RETRIES:
-                print("❌ Max retries reached, exiting.", file=sys.stderr)
-                raise
-            await asyncio.sleep(RETRY_DELAY)
-        except Exception as e:
-            print(f"❌ Unexpected error while starting: {e}", file=sys.stderr)
-            await asyncio.sleep(RETRY_DELAY)
-
-
-async def main():
-    await safe_start()
-
-    # keep running until stopped
-    stop_event = asyncio.Event()
-
-    def _signal_handler(*_):
-        stop_event.set()
-
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        try:
-            loop.add_signal_handler(sig, _signal_handler)
-        except NotImplementedError:
-            # windows or environment that doesn't support add_signal_handler
-            pass
-
-    print("Press Ctrl+C to stop.")
-    await stop_event.wait()
-
-    print("Stopping bot...")
-    await app.stop()
-    print("Bot stopped.")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    else:
+        return await message.reply_text(
+            "👋 Bot is active in this group!\n"
+            "Use **/startquiz** to begin the quiz."
+        )
