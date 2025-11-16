@@ -3,7 +3,7 @@ import os
 # ------------------------
 # Pyrogram Bot Configuration
 # ------------------------
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "7901218073:AAEXbFvRpm6c2IHImk9n8FjJm1XhNJ1TR2U")          # Bot token from BotFather
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8340952338:AAEBc1ADx1GDN3crCbXskzcW-bSHa6E7uwM")          # Bot token from BotFather
 API_ID = int(os.environ.get("API_ID", "22657083"))           # Your Telegram API ID
 API_HASH = os.environ.get("API_HASH", "d6186691704bd901bdab275ceaab88f3")           # Your Telegram API HASH
 OWNER_ID = int(os.environ.get("OWNER_ID", "8449801101"))       # Telegram user ID of the bot owner
