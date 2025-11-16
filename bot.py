@@ -1,16 +1,15 @@
 import asyncio, random
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-# Correct paths based on your folder structure
-from data.helpers import is_admin, add_points, use_coin      # helpers.py is in data/
+from data.helpers import is_admin, add_points, use_coin
 from utils.db import groups_col, users_col, sessions_col, questions_col, admins_col
-from data.keyboards import build_keyboard                     # if you move keyboards.py to data/                       # <-- if keyboards.py is in root
-from config import BOT_TOKEN, OWNER_ID, QUESTION_CHANNEL
+from data.keyboards import build_keyboard
+from config import BOT_TOKEN, API_ID, API_HASH, OWNER_ID, QUESTION_CHANNEL
 
 # ------------------------
-# Initialize Pyrogram Client (BOT Token Only)
+# Initialize bot
 # ------------------------
-app = Client("quiz_bot", bot_token=BOT_TOKEN)
+app = Client("quiz_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # ------------------------
 # /addadmin - Owner only
@@ -25,7 +24,7 @@ async def add_admin(client, message):
     await message.reply_text(f"✅ {username} added as bot admin.")
 
 # ------------------------
-# /startquiz - Any member in group
+# /startquiz - Any member
 # ------------------------
 @app.on_message(filters.command("startquiz") & filters.group)
 async def start_quiz(client, message):
@@ -33,17 +32,15 @@ async def start_quiz(client, message):
     args = message.text.split(" ")
     category = args[1] if len(args) > 1 else "Random"
 
-    group = groups_col.find_one({"group_id": group_id}) or {}
-    if group.get("running", False):
+    group = groups_col.find_one({"group_id": group_id})
+    if group and group.get("running", False):
         return await message.reply_text("❌ Quiz already running!")
 
-    timer = group.get("timer", 30)
+    timer = group.get("timer", 30) if group else 30
     groups_col.update_one({"group_id": group_id}, {"$set": {"running": True, "timer": timer}}, upsert=True)
     await message.reply_text(f"🎉 Quiz started! Category: {category}, Timer: {timer}s")
 
     qs = list(questions_col.find({"category": category})) if category.lower() != "random" else list(questions_col.find())
-    if not qs:
-        return await message.reply_text("❌ No questions found in this category.")
     random.shuffle(qs)
 
     for q in qs:
@@ -56,7 +53,7 @@ async def start_quiz(client, message):
                                reply_markup=build_keyboard(q["options"], q["question"]))
         await asyncio.sleep(timer)
 
-        scores = list(users_col.find().sort("points", -1))
+        scores = users_col.find().sort("points", -1)
         text = f"⏰ Time's up! Correct answer: {q['answer']}\n\n🏆 Scores:\n"
         for user in scores:
             text += f"{user.get('username','User')} - {user.get('points',0)} pts | {user.get('coins',0)} coins\n"
@@ -66,7 +63,7 @@ async def start_quiz(client, message):
     await app.send_message(group_id, "🏁 Quiz ended!")
 
 # ------------------------
-# /stopquiz - Group admins only
+# /stopquiz - Admins only
 # ------------------------
 @app.on_message(filters.command("stopquiz") & filters.group)
 async def stop_quiz(client, message):
@@ -80,7 +77,7 @@ async def stop_quiz(client, message):
         await message.reply_text("❌ Only group admins can stop the quiz.")
 
 # ------------------------
-# /addquiz - Owner/Admin
+# /addquiz - Admin/Owner
 # ------------------------
 @app.on_message(filters.command("addquiz") & filters.private)
 async def add_quiz(client, message):
@@ -101,13 +98,14 @@ async def add_quiz(client, message):
             upsert=True
         )
         await message.reply_text("✅ Question added successfully.")
+        # Send to QUESTION_CHANNEL if set
         if QUESTION_CHANNEL:
             await app.send_message(QUESTION_CHANNEL, f"{category} | {question} | {','.join(options)} | {answer} | {hint}")
     except Exception as e:
         await message.reply_text(f"❌ Error: {e}")
 
 # ------------------------
-# /deletequiz - Owner/Admin
+# /deletequiz - Admin/Owner
 # ------------------------
 @app.on_message(filters.command("deletequiz") & filters.private)
 async def delete_quiz(client, message):
@@ -136,17 +134,21 @@ async def set_timer(client, message):
     await message.reply_text(f"✅ Timer set to {seconds} seconds per question.")
 
 # ------------------------
-# /synsquiz - Sync questions to channel
+# /synsquiz - Sync all questions to channel
 # ------------------------
 @app.on_message(filters.command("synsquiz") & filters.private)
 async def sync_quiz(client, message):
-    if message.from_user.id != OWNER_ID and not is_admin(message.from_user.id):
+    user_id = message.from_user.id
+    if user_id != OWNER_ID and not is_admin(user_id):
         return await message.reply_text("❌ Only owner/admin can sync questions.")
+    
     if not QUESTION_CHANNEL:
         return await message.reply_text("❌ QUESTION_CHANNEL not set in config.py")
+    
     all_questions = list(questions_col.find())
     if not all_questions:
         return await message.reply_text("❌ No questions found to sync.")
+    
     sent_count = 0
     for q in all_questions:
         try:
@@ -157,11 +159,11 @@ async def sync_quiz(client, message):
             sent_count += 1
         except:
             continue
+    
     await message.reply_text(f"✅ Synced {sent_count} questions to the channel.")
 
 # ------------------------
-# Run Bot
+# Run the bot
 # ------------------------
-if __name__ == "__main__":
-    print("🚀 Science Quiz Bot is running...")
-    app.run()
+print("🚀 Science Quiz Bot is running...")
+app.run()
