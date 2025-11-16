@@ -1,7 +1,7 @@
 {
   "name": "science-quiz-bot",
   "description": "A Telegram Science Quiz Bot with Physics, Chemistry, and Biology quizzes, hints & coins system, and admin features.",
-  "repository": "https://github.com/yourusername/science-quiz-bot",
+  "repository": "https://github.com/sexyxcoders/science",
   "logo": "https://example.com/logo.png",
   "keywords": ["telegram", "bot", "quiz", "science", "education"],
   "env": {
